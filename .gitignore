@@ -1,0 +1,12 @@
+node_modules/
+.DS_Store
+.env
+.env.local
+*.log
+.vscode/settings.json
+.idea/
+*.swp
+
+# NOTE: .millennium/Dist/ is intentionally NOT ignored.
+# Millennium installs plugins straight from the repository, so the built
+# bundle has to be committed or users get a plugin with no code.

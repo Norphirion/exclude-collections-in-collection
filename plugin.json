@@ -1,0 +1,8 @@
+{
+    "$schema": "https://raw.githubusercontent.com/SteamClientHomebrew/Millennium/main/src/sys/plugin-schema.json",
+    "name": "exclude-collections-in-collection",
+    "common_name": "Exclude collections in collection",
+    "description": "Filter a Steam dynamic collection by the contents of your other collections - exclude the games they hold, or keep only those",
+    "version": "1.0.0",
+    "useBackend": false
+}
