@@ -26,7 +26,7 @@ exclude-collections-in-collection/
 
 ## Usage
 
-Open **Exclude collections in collection** in the Millennium settings sidebar:
+Open **Exclude collections in collection** in the Millennium Library Manager:
 
 1. Pick the dynamic collection you want to filter
 2. Choose exclude or include
