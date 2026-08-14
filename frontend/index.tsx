@@ -184,9 +184,29 @@ const SettingsContent = () => {
 	);
 };
 
+/**
+ * Startup waits minutes for Steam's store, so the plugin can be dismounted
+ * while that is still pending. Without this flag the pending init would install
+ * filters again straight after teardown released them.
+ */
+let dismounted = false;
+
+/** Called by Millennium when the plugin is disabled or reloaded. */
+function stop(): void {
+	dismounted = true;
+	try {
+		engine.teardown();
+	} catch (error) {
+		console.error('[Exclude collections] teardown failed:', error);
+	}
+}
+
 export default definePlugin(() => {
+	dismounted = false;
+
 	(async () => {
 		const ready = await waitForStore();
+		if (dismounted) return;
 		if (!ready) {
 			console.warn('[Exclude collections] collectionStore never became ready; rules not applied');
 			return;
@@ -195,8 +215,9 @@ export default definePlugin(() => {
 	})().catch((error) => console.error('[Exclude collections] Failed to apply stored rules:', error));
 
 	return {
-		title: 'Collection Filter',
+		title: 'Exclude collections in collection',
 		icon: <IconsModule.Settings />,
 		content: <SettingsContent />,
+		onDismount: stop,
 	};
 });
