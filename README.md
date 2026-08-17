@@ -41,7 +41,7 @@ npm install
 npm run build
 ```
 
-The bundle is written to `.millennium/Dist/index.js` by Millennium's compiler (`@steambrew/ttc`). Copy it into your Millennium plugins folder to test.
+The bundle is written to `.millennium/Dist/index.js` by Millennium's compiler (`@steambrew/ttc`). It is not tracked in git — the plugin store builds the plugin itself and packages the result — so build locally before copying the plugin into your Millennium plugins folder to test.
 
 ## How it works
 

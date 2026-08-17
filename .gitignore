@@ -7,6 +7,7 @@ node_modules/
 .idea/
 *.swp
 
-# NOTE: .millennium/Dist/ is intentionally NOT ignored.
-# Millennium installs plugins straight from the repository, so the built
-# bundle has to be committed or users get a plugin with no code.
+# Build output. PluginDatabase's CI runs `pnpm install && pnpm run build` and
+# then packages the .millennium directory it produced, so shipping it here
+# would only risk publishing a stale bundle.
+.millennium/
