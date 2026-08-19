@@ -17,7 +17,7 @@
     },
     "type": "module",
     "name": "exclude-collections-in-collection",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "description": "Filter a Steam dynamic collection by the contents of your other collections",
     "main": "./frontend/index.jsx",
     "author": "Norphirion",

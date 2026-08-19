@@ -8,6 +8,8 @@ Steam's dynamic collections can filter on tags, features, platforms and so on, b
 
 - **Exclude mode** — hide games that belong to the selected collections
 - **Include mode** — keep only games that belong to the selected collections
+- Set directly **inside Steam's own filter editor**, alongside the native filters
+- Also available while **creating** a new dynamic collection
 - Rules are set **per dynamic collection**, and stack on top of Steam's own filters
 - Settings persist across restarts
 - Filtered collections update on their own when the source collections change
@@ -26,11 +28,9 @@ exclude-collections-in-collection/
 
 ## Usage
 
-Open **Exclude collections in collection** in the Millennium Library Manager:
+Open a dynamic collection's filter editor in your library — or start creating a new dynamic collection. Two extra buckets appear next to Steam's own, **Exclude collections** and **Include collections**. Pick collections from the dropdown; click a chip to remove it. Changes apply immediately, and a collection already used by one bucket is greyed out in the other.
 
-1. Pick the dynamic collection you want to filter
-2. Choose exclude or include
-3. Toggle the collections to use as the source
+The same rules can also be edited from **Exclude collections in collection** in the Millennium Library Manager, which additionally lists every rule you have set.
 
 Only dynamic collections can be targeted. A static collection has no filter of its own, so pushing it through the filtering path would discard the membership you curated by hand.
 
@@ -49,11 +49,15 @@ Steam evaluates a dynamic collection by calling `Matches()` on the collection's 
 
 The one seam MobX leaves open is that `m_filter` itself is an accessor **with a setter**. So `frontend/engine.ts` swaps in a stand-in object that inherits the same prototype, forwards every own property — MobX administration symbols included — back to the original, and overrides only `Matches` and `bIsEmpty`. Steam's own code calls it without noticing, and the cloud-synced `filterSpec` is never modified.
 
-Two constraints worth knowing before changing this code:
+Three constraints worth knowing before changing this code:
 
 - **Never read `userCollections` or `allAppsCollection` before Steam is ready.** They are MobX computeds that throw when the store is still empty, and MobX caches that error — Steam's own render then reads the cached failure and the library never draws. A `try/catch` does not help; the damage is done by the read itself. Startup gates on plain, non-derived fields instead.
 - **Source collections are polled, not observed.** A reaction would be more elegant, but re-entering the MobX graph is the thing that broke the library repeatedly during development. A 3-second poll comparing app-id sets is the deliberate trade.
+- **A wrapper cannot be assumed to stay installed.** Steam rebuilds `m_filter` when a collection is edited and saved, and again while it finishes its own start-up. That silently discards the stand-in, so each poll re-checks and reinstalls rather than trusting its bookkeeping.
 
-## License
+### The injected UI
 
-MIT
+`frontend/nativeUi.tsx` appends buckets to Steam's filter area; it never modifies Steam's own elements, so removing the plugin leaves the panel exactly as it was. Two details are load-bearing:
+
+- Steam gives its buckets an explicit CSS `order`, so ours need one too or they render first.
+- The filter area is a `repeat(4, 1fr)` grid with no imposed width, which makes `1fr` resolve against **max-content**. The max-content of a wrapping chip row is every chip on a single line, so each chip added would widen all four columns. The chip container therefore carries a definite `width: 0` — which contributes nothing to that measurement — plus `min-width: 100%` to fill the column once the track has been sized.

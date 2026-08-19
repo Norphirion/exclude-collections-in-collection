@@ -3,6 +3,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { FilterEngine, listCollections } from './engine';
 import { loadRules, saveRules } from './storage';
 import { CollectionInfo, FilterMode, RuleMap } from './types';
+import { startNativeUi, stopNativeUi } from './nativeUi';
 
 const engine = new FilterEngine();
 
@@ -191,9 +192,26 @@ const SettingsContent = () => {
  */
 let dismounted = false;
 
+/**
+ * Applies one rule and persists it. Shared by the settings panel and the buckets
+ * injected into Steam's own filter UI, so both write through the same path.
+ */
+function applyRule(collectionId: string, mode: FilterMode, sourceIds: string[]): void {
+	const rules = loadRules();
+	if (sourceIds.length === 0) delete rules[collectionId];
+	else rules[collectionId] = { mode, sourceIds };
+	saveRules(rules);
+	engine.applyRules(rules);
+}
+
 /** Called by Millennium when the plugin is disabled or reloaded. */
 function stop(): void {
 	dismounted = true;
+	try {
+		stopNativeUi();
+	} catch (error) {
+		console.error('[Exclude collections] native UI teardown failed:', error);
+	}
 	try {
 		engine.teardown();
 	} catch (error) {
@@ -212,6 +230,7 @@ export default definePlugin(() => {
 			return;
 		}
 		engine.applyRules(loadRules());
+		startNativeUi({ getRules: loadRules, setRule: applyRule });
 	})().catch((error) => console.error('[Exclude collections] Failed to apply stored rules:', error));
 
 	return {
