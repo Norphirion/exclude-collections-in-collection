@@ -80,7 +80,7 @@ function listCollectionIds(): string[] {
 /**
  * Steam shows this filter UI in two places: the editor of an existing dynamic
  * collection, and the pane used to create a new one. The markup is identical, so
- * the same bucket renders in both — only the target differs, and a collection
+ * the same bucket renders in both: only the target differs, and a collection
  * being created has no id yet.
  */
 interface Surface {

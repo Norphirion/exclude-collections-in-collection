@@ -13,7 +13,7 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
  * Readiness probing has to avoid MobX *computeds* entirely.
  *
  * `userCollections` and `allAppsCollection` are computeds. Evaluating one before
- * Steam has populated the store throws — and MobX caches that error, so Steam's
+ * Steam has populated the store throws, and MobX caches that error, so Steam's
  * own render later reads the cached failure and the library never draws. A
  * try/catch does not help: the damage is done by the read itself, not by the
  * exception escaping.
@@ -174,7 +174,7 @@ const SettingsContent = () => {
 				label="Active rule"
 				description={
 					currentRule.sourceIds.length === 0
-						? 'No rule — this collection is untouched'
+						? 'No rule: this collection is untouched'
 						: `${currentRule.mode === 'exclude' ? 'Excluding' : 'Including only'} ${currentRule.sourceIds.length} collection(s)`
 				}
 				bottomSeparator="none"

@@ -108,7 +108,7 @@ export class FilterEngine {
 	 * collection stale until a UI reload. Poll the sources and refresh on change.
 	 */
 	/**
-	 * Steam rebuilds a collection's filter object in several situations — editing
+	 * Steam rebuilds a collection's filter object in several situations: editing
 	 * and saving it, or simply finishing its own start-up after we wrapped. That
 	 * silently discards our stand-in while `wrapped` still claims it is installed,
 	 * so the rule stops applying. Re-check and reinstall rather than trusting it.
