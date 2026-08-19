@@ -57,7 +57,7 @@ Three constraints worth knowing before changing this code:
 
 ### The injected UI
 
-`frontend/nativeUi.tsx` appends buckets to Steam's filter area; it never modifies Steam's own elements, so removing the plugin leaves the panel exactly as it was. Two details are load-bearing:
+`frontend/nativeUi.tsx` appends buckets next to Steam's filter area; it never modifies Steam's own elements, so removing the plugin leaves the panel exactly as it was. Two details are load-bearing:
 
-- Steam gives its buckets an explicit CSS `order`, so ours need one too or they render first.
-- The filter area is a `repeat(4, 1fr)` grid with no imposed width, which makes `1fr` resolve against **max-content**. The max-content of a wrapping chip row is every chip on a single line, so each chip added would widen all four columns. The chip container therefore carries a definite `width: 0` — which contributes nothing to that measurement — plus `min-width: 100%` to fill the column once the track has been sized.
+- **The buckets go beside the filter grid, not inside it.** That grid is declared `grid-template-rows: 2fr 1fr` and Steam's own buckets occupy the `2fr` row, so anything appended lands in the `1fr` row and every pixel of height it needs costs three — the native row is forced to twice ours. Steam hits the same problem with its own Language and Genre buckets and solves it by putting them in a sibling container, outside the grid; reusing that container's class puts ours in the same place and inherits its breakpoints.
+- **The chip container carries a definite `width: 0` plus `min-width: 100%`.** Its width would otherwise be set by max-content, which for a wrapping row is every chip on a single line. A definite width contributes nothing to that measurement, and the `min-width` fills the available space once it has been resolved.

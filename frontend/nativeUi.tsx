@@ -8,13 +8,17 @@ import { FilterMode, RuleMap } from './types';
  * and make any document-wide lookup return the wrong one.
  */
 const HOST_ATTR = 'data-ecic-bucket';
+/** Marks the container the buckets are placed in, next to Steam's own. */
+const TRAY_ATTR = 'data-ecic-tray';
 const DESKTOP_POPUP = 'SP Desktop_uid0';
 const POLL_MS = 1000;
 /** How long to wait for Steam to materialise a freshly created collection. */
 const CREATION_WATCH_MS = 15000;
 
 interface FilterClasses {
+	Filters: string;
 	FilterArea: string;
+	LanguageAndGenre: string;
 	FilterBucket: string;
 	FilterBucketLabel: string;
 	FilterBucketBoxes: string;
@@ -37,7 +41,7 @@ function getClasses(): { filter: FilterClasses; editor: EditorClasses } | null {
 	} catch {
 		return null;
 	}
-	if (!filterClasses?.FilterArea || !editorClasses?.CollectionEditor) return null;
+	if (!filterClasses?.Filters || !filterClasses?.LanguageAndGenre || !editorClasses?.CollectionEditor) return null;
 	return { filter: filterClasses, editor: editorClasses };
 }
 
@@ -80,7 +84,7 @@ function listCollectionIds(): string[] {
  * being created has no id yet.
  */
 interface Surface {
-	area: HTMLElement;
+	filters: HTMLElement;
 	targetId: string | null;
 }
 
@@ -88,13 +92,13 @@ function findSurfaces(doc: Document, cls: FilterClasses, ed: EditorClasses): Sur
 	const editor = doc.querySelector<HTMLElement>('.' + ed.CollectionEditor);
 	const surfaces: Surface[] = [];
 
-	for (const area of Array.from(doc.querySelectorAll<HTMLElement>('.' + cls.FilterArea))) {
+	for (const filters of Array.from(doc.querySelectorAll<HTMLElement>('.' + cls.Filters))) {
 		const visible =
-			typeof area.checkVisibility !== 'function' ||
-			area.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true });
+			typeof filters.checkVisibility !== 'function' ||
+			filters.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true });
 		if (!visible) continue;
-		const inEditor = !!editor && editor.contains(area);
-		surfaces.push({ area, targetId: inEditor ? currentCollectionId() : null });
+		const inEditor = !!editor && editor.contains(filters);
+		surfaces.push({ filters, targetId: inEditor ? currentCollectionId() : null });
 	}
 	return surfaces;
 }
@@ -214,26 +218,46 @@ function renderBucket(host: HTMLElement, surface: Surface, mode: FilterMode, cls
 	);
 }
 
+/**
+ * The buckets live beside Steam's filter grid rather than inside it.
+ *
+ * That grid is declared `grid-template-rows: 2fr 1fr`, and Steam's own buckets
+ * occupy the `2fr` row. Anything appended lands in the `1fr` row, so every pixel
+ * of height it needs costs three: the native row is forced to twice ours. Seven
+ * chips wrapping over a few lines took the panel from 263px to 663px.
+ *
+ * Steam has the same problem with its own Language and Genre buckets and solves
+ * it by putting them in a sibling container, outside the grid. We reuse that
+ * container's class so ours inherits the same layout and breakpoints, and lands
+ * just after it.
+ */
+function ensureTray(surface: Surface, cls: FilterClasses, doc: Document): HTMLElement {
+	let tray = surface.filters.querySelector<HTMLElement>(`[${TRAY_ATTR}]`);
+	if (!tray) {
+		tray = doc.createElement('div');
+		tray.setAttribute(TRAY_ATTR, '1');
+		tray.className = cls.FilterBucket + ' ' + cls.LanguageAndGenre;
+		surface.filters.appendChild(tray);
+	}
+	return tray;
+}
+
 function ensureBuckets(surface: Surface, cls: FilterClasses, doc: Document): void {
+	const tray = ensureTray(surface, cls, doc);
 	const modes: FilterMode[] = ['exclude', 'include'];
-	modes.forEach((mode, index) => {
-		let host = surface.area.querySelector<HTMLElement>(`[${HOST_ATTR}="${mode}"]`);
+	for (const mode of modes) {
+		let host = tray.querySelector<HTMLElement>(`[${HOST_ATTR}="${mode}"]`);
 		if (!host) {
 			host = doc.createElement('div');
 			host.setAttribute(HOST_ATTR, mode);
 			host.className = cls.FilterBucket + ' Panel';
-			// Steam gives its own buckets an explicit CSS order, so without one ours
-			// would render first. No width is set on purpose: letting the grid size
-			// them is what keeps the panel responsive at every window size.
-			host.style.order = String(98 + index);
-			// Grid items default to `min-width: auto`, which lets their content set
-			// the column width. Without this, adding chips widens every column of
-			// Steam's filter grid.
+			// No width is set on purpose: letting the surrounding flex row size the
+			// buckets is what keeps the panel responsive at every window size.
 			host.style.minWidth = '0';
-			surface.area.appendChild(host);
+			tray.appendChild(host);
 		}
 		renderBucket(host, surface, mode, cls);
-	});
+	}
 }
 
 /** Watches for the collection Steam creates when the creation pane is saved. */
@@ -322,5 +346,9 @@ export function stopNativeUi(): void {
 		host.remove();
 	}
 	roots.clear();
+
+	const doc = getMainDocument();
+	if (doc) for (const tray of Array.from(doc.querySelectorAll(`[${TRAY_ATTR}]`))) tray.remove();
+
 	hooks = null;
 }
