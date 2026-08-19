@@ -107,10 +107,40 @@ export class FilterEngine {
 	 * adding a game to a source collection would otherwise leave the filtered
 	 * collection stale until a UI reload. Poll the sources and refresh on change.
 	 */
+	/**
+	 * Steam rebuilds a collection's filter object in several situations — editing
+	 * and saving it, or simply finishing its own start-up after we wrapped. That
+	 * silently discards our stand-in while `wrapped` still claims it is installed,
+	 * so the rule stops applying. Re-check and reinstall rather than trusting it.
+	 */
+	private ensureStillWrapped(targetId: string): void {
+		const entry = this.wrapped.get(targetId);
+		if (!entry) return;
+		const filter = safeRead(() => getStore()?.GetCollection(targetId)?.m_filter, null as any);
+		if (!filter || filter[WRAPPED_FLAG]) return;
+
+		// Steam replaced the object: forget the stale bookkeeping and wrap the new one.
+		this.wrapped.delete(targetId);
+		this.wrap(targetId);
+		this.refresh(targetId);
+	}
+
 	private syncIfChanged(): void {
 		for (const targetId of Object.keys(this.rules)) {
-			if (!this.wrapped.has(targetId)) continue;
 			try {
+				if (!this.wrapped.has(targetId)) {
+					// A rule whose collection was not ready when the rules were applied,
+					// for instance during Steam's start-up.
+					this.wrap(targetId);
+					if (this.wrapped.has(targetId)) {
+						this.sourceSets.set(targetId, this.buildSet(targetId));
+						this.refresh(targetId);
+					}
+					continue;
+				}
+
+				this.ensureStillWrapped(targetId);
+
 				const next = this.buildSet(targetId);
 				const previous = this.sourceSets.get(targetId);
 				if (previous && setsEqual(previous, next)) continue;
@@ -229,7 +259,9 @@ export class FilterEngine {
 			this.refresh(targetId);
 		}
 
-		if (this.wrapped.size > 0) this.startWatching();
+		// Watch whenever rules exist, not merely when a wrapper took: a collection
+		// that was not ready yet has to be picked up on a later pass.
+		if (Object.keys(rules).length > 0) this.startWatching();
 		else this.stopWatching();
 	}
 
